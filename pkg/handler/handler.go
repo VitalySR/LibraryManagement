@@ -3,7 +3,6 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
-	"library/entity"
 	"library/pkg/repository"
 	"log"
 	"net/http"
@@ -38,12 +37,23 @@ func (h *Hundler) bookWorker(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		err = json.NewEncoder(w).Encode(books)
+		//err = json.NewEncoder(w).Encode(books)
+		booksJSON, err := json.Marshal(&books)
 		if err != nil {
 			log.Printf("Error encoding books: %v", err)
+			http.Error(w, "Error encoding books", http.StatusInternalServerError)
+			return
 		}
+		w.Header().Set("Content-Type", "application/json")
+		_, err = w.Write(booksJSON)
+		if err != nil {
+			log.Printf("Error writing books: %v", err)
+			http.Error(w, "Error writing books", http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
 	case http.MethodPost:
-		book := &entity.Book{}
+		book := &repository.Book{}
 
 		err := json.NewDecoder(r.Body).Decode(book)
 		if err != nil {

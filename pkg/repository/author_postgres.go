@@ -3,7 +3,6 @@ package repository
 import (
 	"database/sql"
 	"fmt"
-	"library/entity"
 )
 
 type AuthorPostgres struct {
@@ -14,7 +13,7 @@ func NewAuthorPostgres(db *sql.DB) *AuthorPostgres {
 	return &AuthorPostgres{db: db}
 }
 
-func (b *AuthorPostgres) Create(au entity.Author) (int, error) {
+func (b *AuthorPostgres) Create(au Author) (int, error) {
 	tx, err := b.db.Begin()
 	if err != nil {
 		return 0, err
@@ -33,15 +32,15 @@ func (b *AuthorPostgres) Create(au entity.Author) (int, error) {
 	return id, tx.Commit()
 }
 
-func (b *AuthorPostgres) GetAll() ([]entity.Author, error) {
+func (b *AuthorPostgres) GetAll() ([]Author, error) {
 	return nil, nil
 }
 
-func (b *AuthorPostgres) GetById(id int) (entity.Author, error) {
-	return entity.Author{}, nil
+func (b *AuthorPostgres) GetById(id int) (Author, error) {
+	return Author{}, nil
 }
 
-func (b *AuthorPostgres) Update(entity.Author) error {
+func (b *AuthorPostgres) Update(Author) error {
 	return nil
 }
 

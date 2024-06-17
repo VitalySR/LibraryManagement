@@ -2,22 +2,21 @@ package repository
 
 import (
 	"database/sql"
-	"library/entity"
 )
 
 type BookWorker interface {
-	Create(entity.Book) (int, error)
-	GetAll() ([]entity.Book, error)
-	GetById(id int) (entity.Book, error)
-	Update(entity.Book) error
+	Create(Book) (int, error)
+	GetAll() ([]Book, error)
+	GetById(id int) (Book, error)
+	Update(Book) error
 	Delete(id int) error
 }
 
 type AuthorWorker interface {
-	Create(author entity.Author) (int, error)
-	GetAll() ([]entity.Author, error)
-	GetById(id int) (entity.Author, error)
-	Update(author entity.Author) error
+	Create(author Author) (int, error)
+	GetAll() ([]Author, error)
+	GetById(id int) (Author, error)
+	Update(author Author) error
 	Delete(id int) error
 }
 
