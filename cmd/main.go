@@ -1,6 +1,7 @@
 package main
 
 import (
+	LibraryManagement "library"
 	"library/pkg/handler"
 	"library/pkg/repository"
 	"log"
@@ -28,9 +29,9 @@ func main() {
 
 	repos := repository.NewRepository(db)
 	hund := handler.NewHandler(repos)
-	hund.InitRoutes()
 
-	err = hund.RunServer()
+	srv := new(LibraryManagement.Server)
+	err = srv.Run("8080", hund.InitRoutes())
 	if err != nil {
 		log.Fatal(err)
 	}

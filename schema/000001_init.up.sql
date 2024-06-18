@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS book
 (
     Id          serial          primary key,
 	Title       varchar(255)    not null,
-	Author_Id   int             REFERENCES author (Id),
+	Author_Id   int             REFERENCES author (Id) ON DELETE SET NULL,
     Year        int,
 	ISBN        varchar(50)
 );

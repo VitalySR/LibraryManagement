@@ -2,6 +2,7 @@ package repository
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 )
@@ -38,7 +39,7 @@ func (b *BookPostgres) Create(bk Book) (int, error) {
 }
 
 func (b *BookPostgres) GetAll() ([]Book, error) {
-	query := fmt.Sprintf("select b.id, b.title, b.year, b.isbn, b.author_id, a.FirstName, a.LastName, a.Biography, a.BirthDate from %s b left join author a on a.ID = b.Author_Id", bookTable)
+	query := fmt.Sprintf("select b.id, b.title, b.year, b.isbn, b.author_id, a.FirstName, a.LastName, a.Biography, a.BirthDate from %s b left join %s a on a.ID = b.Author_Id", bookTable, authorTable)
 	rows, err := b.db.Query(query)
 	if err != nil {
 		return nil, err
@@ -48,8 +49,6 @@ func (b *BookPostgres) GetAll() ([]Book, error) {
 	for rows.Next() {
 		bk := Book{}
 		author := Author{}
-		log.Printf("%+v\n", bk)
-		log.Printf("%+v\n", author)
 		if err := rows.Scan(&bk.ID, &bk.Title, &bk.Year, &bk.ISBN, &author.ID, &author.FirstName, &author.LastName, &author.Biography, &author.BirthDate); err != nil {
 			return bks, err
 		}
@@ -62,13 +61,25 @@ func (b *BookPostgres) GetAll() ([]Book, error) {
 }
 
 func (b *BookPostgres) GetById(id int) (Book, error) {
-	return Book{}, nil
+	query := fmt.Sprintf("select b.id, b.title, b.year, b.isbn, b.author_id, a.FirstName, a.LastName, a.Biography, a.BirthDate from %s b left join %s a on a.ID = b.Author_Id where b.ID = $1", bookTable, authorTable)
+	row := b.db.QueryRow(query, id)
+	bk := Book{}
+	author := Author{}
+	err := row.Scan(&bk.ID, &bk.Title, &bk.Year, &bk.ISBN, &author.ID, &author.FirstName, &author.LastName, &author.Biography, &author.BirthDate)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return bk, err
+	}
+	if author.ID != nil {
+		bk.Author = &author
+	}
+	return bk, nil
 }
 
 func (b *BookPostgres) Update(Book) error {
 	return nil
 }
 
-func (b *BookPostgres) Delete(id int) error {
-	return nil
+func (b *BookPostgres) Delete(id int) (sql.Result, error) {
+	query := fmt.Sprintf("delete from %s where Id = $1", bookTable)
+	return b.db.Exec(query, id)
 }

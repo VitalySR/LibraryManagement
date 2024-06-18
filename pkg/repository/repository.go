@@ -9,7 +9,7 @@ type BookWorker interface {
 	GetAll() ([]Book, error)
 	GetById(id int) (Book, error)
 	Update(Book) error
-	Delete(id int) error
+	Delete(id int) (sql.Result, error)
 }
 
 type AuthorWorker interface {

@@ -6,6 +6,7 @@ import (
 	"library/pkg/repository"
 	"log"
 	"net/http"
+	"strconv"
 )
 
 type Hundler struct {
@@ -16,15 +17,15 @@ func NewHandler(repository *repository.Repository) *Hundler {
 	return &Hundler{repository: repository}
 }
 
-func (h *Hundler) InitRoutes() {
-	http.HandleFunc("/books", h.bookWorker)
+func (h *Hundler) InitRoutes() http.Handler {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/books", h.books)
+	mux.HandleFunc("/books/{id}", h.bookId)
+
+	return mux
 }
 
-func (h *Hundler) RunServer() error {
-	return http.ListenAndServe(":8080", nil)
-}
-
-func (h *Hundler) bookWorker(w http.ResponseWriter, r *http.Request) {
+func (h *Hundler) books(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Call link %s, method: %s", r.RequestURI, r.Method)
 
 	switch r.Method {
@@ -37,21 +38,14 @@ func (h *Hundler) bookWorker(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		//err = json.NewEncoder(w).Encode(books)
-		booksJSON, err := json.Marshal(&books)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		err = json.NewEncoder(w).Encode(books)
 		if err != nil {
 			log.Printf("Error encoding books: %v", err)
 			http.Error(w, "Error encoding books", http.StatusInternalServerError)
 			return
 		}
-		w.Header().Set("Content-Type", "application/json")
-		_, err = w.Write(booksJSON)
-		if err != nil {
-			log.Printf("Error writing books: %v", err)
-			http.Error(w, "Error writing books", http.StatusInternalServerError)
-			return
-		}
-		w.WriteHeader(http.StatusOK)
 	case http.MethodPost:
 		book := &repository.Book{}
 
@@ -63,7 +57,7 @@ func (h *Hundler) bookWorker(w http.ResponseWriter, r *http.Request) {
 		}
 		log.Printf("Getting book: %+v\n", book)
 
-		if book.Title == "" {
+		if book.Title == nil || *book.Title == "" {
 			http.Error(w, "Title is mandatory field", http.StatusNotAcceptable)
 			return
 		}
@@ -78,6 +72,59 @@ func (h *Hundler) bookWorker(w http.ResponseWriter, r *http.Request) {
 
 		w.WriteHeader(http.StatusCreated)
 		_, err = fmt.Fprint(w, "Book created successfully with id = ", id)
+		if err != nil {
+			log.Println("Error write answer:", err)
+		}
+	default:
+		log.Println("Unsupported method")
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func (h *Hundler) bookId(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Call link %s, method: %s", r.RequestURI, r.Method)
+
+	param := r.PathValue("id")
+	bookId, err := strconv.Atoi(param)
+	if err != nil {
+		log.Printf("Error converting %s to int: %v\n", param, err)
+		http.Error(w, "Bad book id in URL", http.StatusBadRequest)
+		return
+	}
+
+	switch r.Method {
+	case http.MethodGet:
+		log.Println("Processing method GET")
+		book, err := h.repository.BookWorker.GetById(bookId)
+		log.Println(book, err)
+		if err != nil {
+			log.Printf("Error getting book %d: %v", bookId, err)
+			http.Error(w, "Error getting book", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		err = json.NewEncoder(w).Encode(book)
+		if err != nil {
+			log.Printf("Error encoding book %d: %v", bookId, err)
+			http.Error(w, "Error encoding book", http.StatusInternalServerError)
+			return
+		}
+		return
+	case http.MethodPut:
+		log.Println("Processing method PUT")
+	case http.MethodDelete:
+		log.Println("Processing method DELETE")
+		result, err := h.repository.BookWorker.Delete(bookId)
+		if err != nil {
+			log.Printf("Error deleting book %d: %v", bookId, err)
+			http.Error(w, "Error deleting book", http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		rowsDel, _ := result.RowsAffected()
+		response := fmt.Sprintf("Count deleted book: %v", rowsDel)
+		_, err = w.Write([]byte(response))
 		if err != nil {
 			log.Println("Error write answer:", err)
 		}
