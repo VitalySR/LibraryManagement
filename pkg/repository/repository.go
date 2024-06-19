@@ -8,8 +8,8 @@ type BookWorker interface {
 	Create(Book) (int, error)
 	GetAll() ([]Book, error)
 	GetById(id int) (Book, error)
-	Update(Book) error
-	Delete(id int) (sql.Result, error)
+	Update(Book) (int64, error)
+	Delete(id int) (int64, error)
 }
 
 type AuthorWorker interface {

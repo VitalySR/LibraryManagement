@@ -75,11 +75,26 @@ func (b *BookPostgres) GetById(id int) (Book, error) {
 	return bk, nil
 }
 
-func (b *BookPostgres) Update(Book) error {
-	return nil
+func (b *BookPostgres) Update(bk Book) (int64, error) {
+	var rowCnt int64 = 0
+	query := fmt.Sprintf("update %s set Title = $2, Author_Id = $3, Year = $4, ISBN = $5 where Id = $1", bookTable)
+	var authorId *int32 = nil
+	if bk.Author != nil && bk.Author.ID != nil {
+		authorId = bk.Author.ID
+	}
+	result, err := b.db.Exec(query, bk.ID, bk.Title, authorId, bk.Year, bk.ISBN)
+	if result != nil {
+		rowCnt, _ = result.RowsAffected()
+	}
+	return rowCnt, err
 }
 
-func (b *BookPostgres) Delete(id int) (sql.Result, error) {
+func (b *BookPostgres) Delete(id int) (int64, error) {
+	var rowCnt int64 = 0
 	query := fmt.Sprintf("delete from %s where Id = $1", bookTable)
-	return b.db.Exec(query, id)
+	result, err := b.db.Exec(query, id)
+	if result != nil {
+		rowCnt, _ = result.RowsAffected()
+	}
+	return rowCnt, err
 }

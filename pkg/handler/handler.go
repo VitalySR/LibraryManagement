@@ -113,16 +113,44 @@ func (h *Hundler) bookId(w http.ResponseWriter, r *http.Request) {
 		return
 	case http.MethodPut:
 		log.Println("Processing method PUT")
+		book := &repository.Book{}
+
+		err := json.NewDecoder(r.Body).Decode(book)
+		if err != nil {
+			log.Println("Error decode input:", r.Body, " - ", err)
+			http.Error(w, "Wrong JSON request", http.StatusBadRequest)
+			return
+		}
+		log.Printf("Getting book: %+v\n", book)
+
+		if book.Title == nil || *book.Title == "" {
+			http.Error(w, "Title is mandatory field", http.StatusNotAcceptable)
+			return
+		}
+		bkId := int32(bookId)
+		book.ID = &bkId
+
+		rowsUpdate, err := h.repository.BookWorker.Update(*book)
+		if err != nil {
+			log.Printf("Error updating book %d: %v", bookId, err)
+			http.Error(w, "Error updating book", http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		response := fmt.Sprintf("Count updated book: %v", rowsUpdate)
+		_, err = w.Write([]byte(response))
+		if err != nil {
+			log.Println("Error write answer:", err)
+		}
 	case http.MethodDelete:
 		log.Println("Processing method DELETE")
-		result, err := h.repository.BookWorker.Delete(bookId)
+		rowsDel, err := h.repository.BookWorker.Delete(bookId)
 		if err != nil {
 			log.Printf("Error deleting book %d: %v", bookId, err)
 			http.Error(w, "Error deleting book", http.StatusInternalServerError)
 			return
 		}
 		w.WriteHeader(http.StatusOK)
-		rowsDel, _ := result.RowsAffected()
 		response := fmt.Sprintf("Count deleted book: %v", rowsDel)
 		_, err = w.Write([]byte(response))
 		if err != nil {
