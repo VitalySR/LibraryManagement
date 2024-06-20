@@ -21,13 +21,23 @@ type AuthorWorker interface {
 }
 
 type Repository struct {
-	BookWorker
-	AuthorWorker
+	BookWorker   BookWorker
+	AuthorWorker AuthorWorker
+	//db           *sql.DB
 }
 
 func NewRepository(db *sql.DB) *Repository {
 	return &Repository{
 		BookWorker:   NewBookPostgres(db),
 		AuthorWorker: NewAuthorPostgres(db),
+		//db:           db,
 	}
 }
+
+//func (repo *Repository) CreateBook(book Book) (int, error) {
+//	tx, err := repo.db.Begin()
+//	if err != nil {
+//		return 0, err
+//	}
+//	repo.BookWorker.Create(book)
+//}

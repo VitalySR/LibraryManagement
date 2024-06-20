@@ -24,6 +24,7 @@ func (h *Hundler) InitRoutes() http.Handler {
 	mux.HandleFunc("/books/{id}", h.bookId)
 	mux.HandleFunc("/authors", h.authors)
 	mux.HandleFunc("/authors/{id}", h.authorsId)
+	mux.HandleFunc("/books/{book_id}/authors/{author_id}", h.updateBookAndAuthor)
 	return mux
 }
 
@@ -50,7 +51,8 @@ func (h *Hundler) books(w http.ResponseWriter, r *http.Request) {
 		book := &repository.Book{}
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
-			errorResult(&w, "Error reading body", err, http.StatusInternalServerError)
+			errorResult(&w, "Error decoding input JSON", err, http.StatusBadRequest)
+			return
 		}
 		log.Println("Input body:", string(body))
 		//err := json.NewDecoder(r.Body).Decode(book)
@@ -61,8 +63,8 @@ func (h *Hundler) books(w http.ResponseWriter, r *http.Request) {
 		}
 		log.Printf("Getting book: %+v\n", book)
 
-		if book.Title == nil || *book.Title == "" {
-			http.Error(w, "title is mandatory field", http.StatusNotAcceptable)
+		if err = book.Validate(false); err != nil {
+			errorResult(&w, err.Error(), err, http.StatusBadRequest)
 			return
 		}
 
@@ -116,7 +118,8 @@ func (h *Hundler) bookId(w http.ResponseWriter, r *http.Request) {
 		book := &repository.Book{}
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
-			errorResult(&w, "Error reading body", err, http.StatusInternalServerError)
+			errorResult(&w, "Error decoding input JSON", err, http.StatusBadRequest)
+			return
 		}
 		log.Println("Input body:", string(body))
 		//err := json.NewDecoder(r.Body).Decode(book)
@@ -127,12 +130,17 @@ func (h *Hundler) bookId(w http.ResponseWriter, r *http.Request) {
 		}
 		log.Printf("Getting book: %+v\n", book)
 
-		if book.Title == nil || *book.Title == "" {
-			http.Error(w, "title is mandatory field", http.StatusNotAcceptable)
+		if err = book.Validate(false); err != nil {
+			errorResult(&w, err.Error(), err, http.StatusBadRequest)
 			return
 		}
-		bkId := int32(id)
-		book.ID = &bkId
+
+		id32 := int32(id)
+		if book.ID != nil && *book.ID != id32 {
+			errorResult(&w, "Book id does not match with URL", nil, http.StatusBadRequest)
+			return
+		}
+		book.ID = &id32
 
 		rowsUpdate, err := h.repository.BookWorker.Update(*book)
 		if err != nil {
@@ -193,7 +201,8 @@ func (h *Hundler) authors(w http.ResponseWriter, r *http.Request) {
 		author := &repository.Author{}
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
-			errorResult(&w, "Error reading body", err, http.StatusInternalServerError)
+			errorResult(&w, "Error decoding input JSON", err, http.StatusBadRequest)
+			return
 		}
 		log.Println("Input body:", string(body))
 		//err = json.NewDecoder(r.Body).Decode(author)
@@ -204,8 +213,8 @@ func (h *Hundler) authors(w http.ResponseWriter, r *http.Request) {
 		}
 		log.Printf("Getting author: %+v\n", author)
 
-		if author.FirstName == nil || *author.FirstName == "" || author.LastName == nil || *author.LastName == "" {
-			http.Error(w, "first_name and last_name are mandatory fields", http.StatusNotAcceptable)
+		if err = author.Validate(); err != nil {
+			errorResult(&w, err.Error(), err, http.StatusBadRequest)
 			return
 		}
 
@@ -258,7 +267,8 @@ func (h *Hundler) authorsId(w http.ResponseWriter, r *http.Request) {
 		author := &repository.Author{}
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
-			errorResult(&w, "Error reading body", err, http.StatusInternalServerError)
+			errorResult(&w, "Error decoding input JSON", err, http.StatusBadRequest)
+			return
 		}
 		log.Println("Input body:", string(body))
 		//err := json.NewDecoder(r.Body).Decode(author)
@@ -269,11 +279,16 @@ func (h *Hundler) authorsId(w http.ResponseWriter, r *http.Request) {
 		}
 		log.Printf("Getting book: %+v\n", author)
 
-		if author.FirstName == nil || *author.FirstName == "" || author.LastName == nil || *author.LastName == "" {
-			http.Error(w, "first_name and last_name are mandatory fields", http.StatusNotAcceptable)
+		if err = author.Validate(); err != nil {
+			errorResult(&w, err.Error(), err, http.StatusBadRequest)
 			return
 		}
+
 		id32 := int32(id)
+		if author.ID != nil && *author.ID != id32 {
+			errorResult(&w, "Author id does not match with URL", nil, http.StatusBadRequest)
+			return
+		}
 		author.ID = &id32
 
 		rowsUpdate, err := h.repository.AuthorWorker.Update(*author)
@@ -309,6 +324,63 @@ func (h *Hundler) authorsId(w http.ResponseWriter, r *http.Request) {
 	default:
 		errorResult(&w, "Method not allowed", nil, http.StatusMethodNotAllowed)
 	}
+}
+
+func (h *Hundler) updateBookAndAuthor(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Call link %s, method: %s", r.RequestURI, r.Method)
+	if r.Method != http.MethodPut {
+		errorResult(&w, "Method not allowed", nil, http.StatusMethodNotAllowed)
+		return
+	}
+
+	param1 := r.PathValue("book_id")
+	bookId, err := strconv.Atoi(param1)
+	if err != nil {
+		log.Printf("Error converting %s to int: %v\n", param1, err)
+		http.Error(w, "Bad book id in URL", http.StatusBadRequest)
+		return
+	}
+
+	param2 := r.PathValue("author_id")
+	authorId, err := strconv.Atoi(param2)
+	if err != nil {
+		log.Printf("Error converting %s to int: %v\n", param2, err)
+		http.Error(w, "Bad author id in URL", http.StatusBadRequest)
+		return
+	}
+
+	book := &repository.Book{}
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		errorResult(&w, "Error decoding input JSON", err, http.StatusBadRequest)
+	}
+	log.Println("Input body:", string(body))
+	//err := json.NewDecoder(r.Body).Decode(book)
+	err = json.Unmarshal(body, book)
+	if err != nil {
+		errorResult(&w, "Error decoding input JSON", err, http.StatusBadRequest)
+		return
+	}
+	log.Printf("Getting book: %+v\n", book)
+
+	if err = book.Validate(true); err != nil {
+		errorResult(&w, err.Error(), err, http.StatusBadRequest)
+		return
+	}
+
+	bookId32 := int32(bookId)
+	if book.ID != nil && *book.ID != bookId32 {
+		errorResult(&w, "Book id does not match with URL", nil, http.StatusBadRequest)
+		return
+	}
+	book.ID = &bookId32
+
+	authorId32 := int32(authorId)
+	if book.Author.ID != nil && *book.Author.ID != authorId32 {
+		errorResult(&w, "Author id does not match with URL", nil, http.StatusBadRequest)
+		return
+	}
+	book.Author.ID = &authorId32
 }
 
 func errorResult(w *http.ResponseWriter, msg string, err error, stat int) {
