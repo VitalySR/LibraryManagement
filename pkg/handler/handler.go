@@ -34,7 +34,7 @@ func (h *Hundler) books(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		log.Println("Processing method GET")
-		books, err := h.repository.BookWorker.GetAll()
+		books, err := h.repository.GetAllBook()
 		if err != nil {
 			errorResult(&w, "Error getting books", err, http.StatusInternalServerError)
 			return
@@ -61,14 +61,14 @@ func (h *Hundler) books(w http.ResponseWriter, r *http.Request) {
 			errorResult(&w, "Error decoding input JSON", err, http.StatusBadRequest)
 			return
 		}
-		log.Printf("Getting book: %+v\n", book)
+		log.Printf("Getting book: %+v\n", *book)
 
 		if err = book.Validate(false); err != nil {
 			errorResult(&w, err.Error(), err, http.StatusBadRequest)
 			return
 		}
 
-		id, err := h.repository.BookWorker.Create(*book)
+		id, err := h.repository.CreateBook(book)
 		if err != nil {
 			errorResult(&w, "Error creating book", err, http.StatusInternalServerError)
 			return
@@ -99,7 +99,7 @@ func (h *Hundler) bookId(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		log.Println("Processing method GET")
-		book, err := h.repository.BookWorker.GetById(id)
+		book, err := h.repository.GetBookById(id)
 		log.Println(book, err)
 		if err != nil {
 			errorResult(&w, "Error getting book", err, http.StatusInternalServerError)
@@ -128,7 +128,7 @@ func (h *Hundler) bookId(w http.ResponseWriter, r *http.Request) {
 			errorResult(&w, "Error decoding input JSON", err, http.StatusBadRequest)
 			return
 		}
-		log.Printf("Getting book: %+v\n", book)
+		log.Printf("Getting book: %+v\n", *book)
 
 		if err = book.Validate(false); err != nil {
 			errorResult(&w, err.Error(), err, http.StatusBadRequest)
@@ -142,7 +142,7 @@ func (h *Hundler) bookId(w http.ResponseWriter, r *http.Request) {
 		}
 		book.ID = &id32
 
-		rowsUpdate, err := h.repository.BookWorker.Update(*book)
+		rowsUpdate, err := h.repository.UpdateBook(book)
 		if err != nil {
 			errorResult(&w, "Error updating book", err, http.StatusInternalServerError)
 			return
@@ -158,7 +158,7 @@ func (h *Hundler) bookId(w http.ResponseWriter, r *http.Request) {
 		}
 	case http.MethodDelete:
 		log.Println("Processing method DELETE")
-		rowsDel, err := h.repository.BookWorker.Delete(id)
+		rowsDel, err := h.repository.DeleteBook(id)
 		if err != nil {
 			errorResult(&w, "Error deleting book", err, http.StatusInternalServerError)
 			return
@@ -183,7 +183,7 @@ func (h *Hundler) authors(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		log.Println("Processing method GET")
-		authors, err := h.repository.AuthorWorker.GetAll()
+		authors, err := h.repository.GetAllAuthor()
 		if err != nil {
 			errorResult(&w, "Error getting authors", err, http.StatusInternalServerError)
 			return
@@ -211,14 +211,14 @@ func (h *Hundler) authors(w http.ResponseWriter, r *http.Request) {
 			errorResult(&w, "Error decoding input JSON", err, http.StatusBadRequest)
 			return
 		}
-		log.Printf("Getting author: %+v\n", author)
+		log.Printf("Getting author: %+v\n", *author)
 
 		if err = author.Validate(); err != nil {
 			errorResult(&w, err.Error(), err, http.StatusBadRequest)
 			return
 		}
 
-		id, err := h.repository.AuthorWorker.Create(*author)
+		id, err := h.repository.CreateAuthor(author)
 		if err != nil {
 			errorResult(&w, "Error creating author", err, http.StatusInternalServerError)
 			return
@@ -249,7 +249,7 @@ func (h *Hundler) authorsId(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		log.Println("Processing method GET")
-		author, err := h.repository.AuthorWorker.GetById(id)
+		author, err := h.repository.GetAuthorById(id)
 		if err != nil {
 			errorResult(&w, "Error getting author", err, http.StatusInternalServerError)
 			return
@@ -277,7 +277,7 @@ func (h *Hundler) authorsId(w http.ResponseWriter, r *http.Request) {
 			errorResult(&w, "Error decoding input JSON", err, http.StatusBadRequest)
 			return
 		}
-		log.Printf("Getting book: %+v\n", author)
+		log.Printf("Getting author: %+v\n", *author)
 
 		if err = author.Validate(); err != nil {
 			errorResult(&w, err.Error(), err, http.StatusBadRequest)
@@ -291,7 +291,7 @@ func (h *Hundler) authorsId(w http.ResponseWriter, r *http.Request) {
 		}
 		author.ID = &id32
 
-		rowsUpdate, err := h.repository.AuthorWorker.Update(*author)
+		rowsUpdate, err := h.repository.UpdateAuthor(author)
 		if err != nil {
 			errorResult(&w, "Error updating author", err, http.StatusInternalServerError)
 			return
@@ -307,7 +307,7 @@ func (h *Hundler) authorsId(w http.ResponseWriter, r *http.Request) {
 		}
 	case http.MethodDelete:
 		log.Println("Processing method DELETE")
-		rowsDel, err := h.repository.AuthorWorker.Delete(id)
+		rowsDel, err := h.repository.DeleteAuthor(id)
 		if err != nil {
 			errorResult(&w, "Error deleting author", err, http.StatusInternalServerError)
 			return
