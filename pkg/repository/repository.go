@@ -16,8 +16,8 @@ type AuthorWorker interface {
 	Create(author Author) (int, error)
 	GetAll() ([]Author, error)
 	GetById(id int) (Author, error)
-	Update(author Author) error
-	Delete(id int) error
+	Update(author Author) (int64, error)
+	Delete(id int) (int64, error)
 }
 
 type Repository struct {

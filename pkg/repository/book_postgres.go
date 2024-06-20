@@ -28,7 +28,7 @@ func (b *BookPostgres) Create(bk Book) (int, error) {
 		authorId = bk.Author.ID
 	}
 	query := fmt.Sprintf("INSERT INTO %s (Title, Author_Id, Year, ISBN) values ($1, $2, $3, $4) RETURNING Id", bookTable)
-	row := tx.QueryRow(query, bk.Title, Int32WithNull(authorId), Int32WithNull(bk.Year), StringWithNull(bk.ISBN))
+	row := tx.QueryRow(query, bk.Title, authorId, bk.Year, bk.ISBN)
 	err = row.Scan(&id)
 	if err != nil {
 		tx.Rollback()
@@ -39,6 +39,7 @@ func (b *BookPostgres) Create(bk Book) (int, error) {
 }
 
 func (b *BookPostgres) GetAll() ([]Book, error) {
+	log.Println("BookPostgres. GetAll")
 	query := fmt.Sprintf("select b.id, b.title, b.year, b.isbn, b.author_id, a.FirstName, a.LastName, a.Biography, a.BirthDate from %s b left join %s a on a.ID = b.Author_Id", bookTable, authorTable)
 	rows, err := b.db.Query(query)
 	if err != nil {
@@ -50,7 +51,7 @@ func (b *BookPostgres) GetAll() ([]Book, error) {
 		bk := Book{}
 		author := Author{}
 		if err := rows.Scan(&bk.ID, &bk.Title, &bk.Year, &bk.ISBN, &author.ID, &author.FirstName, &author.LastName, &author.Biography, &author.BirthDate); err != nil {
-			return bks, err
+			return nil, err
 		}
 		if author.ID != nil {
 			bk.Author = &author
@@ -61,6 +62,7 @@ func (b *BookPostgres) GetAll() ([]Book, error) {
 }
 
 func (b *BookPostgres) GetById(id int) (Book, error) {
+	log.Println("BookPostgres. GetById")
 	query := fmt.Sprintf("select b.id, b.title, b.year, b.isbn, b.author_id, a.FirstName, a.LastName, a.Biography, a.BirthDate from %s b left join %s a on a.ID = b.Author_Id where b.ID = $1", bookTable, authorTable)
 	row := b.db.QueryRow(query, id)
 	bk := Book{}
@@ -76,25 +78,44 @@ func (b *BookPostgres) GetById(id int) (Book, error) {
 }
 
 func (b *BookPostgres) Update(bk Book) (int64, error) {
+	log.Println("BookPostgres. Update")
 	var rowCnt int64 = 0
+	tx, err := b.db.Begin()
+	if err != nil {
+		return 0, err
+	}
+
 	query := fmt.Sprintf("update %s set Title = $2, Author_Id = $3, Year = $4, ISBN = $5 where Id = $1", bookTable)
 	var authorId *int32 = nil
 	if bk.Author != nil && bk.Author.ID != nil {
 		authorId = bk.Author.ID
 	}
-	result, err := b.db.Exec(query, bk.ID, bk.Title, authorId, bk.Year, bk.ISBN)
+	result, err := tx.Exec(query, bk.ID, bk.Title, authorId, bk.Year, bk.ISBN)
+	if err != nil {
+		tx.Rollback()
+		return 0, err
+	}
 	if result != nil {
 		rowCnt, _ = result.RowsAffected()
 	}
-	return rowCnt, err
+	return rowCnt, tx.Commit()
 }
 
 func (b *BookPostgres) Delete(id int) (int64, error) {
+	log.Println("BookPostgres. Delete")
 	var rowCnt int64 = 0
+	tx, err := b.db.Begin()
+	if err != nil {
+		return 0, err
+	}
 	query := fmt.Sprintf("delete from %s where Id = $1", bookTable)
-	result, err := b.db.Exec(query, id)
+	result, err := tx.Exec(query, id)
+	if err != nil {
+		tx.Rollback()
+		return 0, err
+	}
 	if result != nil {
 		rowCnt, _ = result.RowsAffected()
 	}
-	return rowCnt, err
+	return rowCnt, tx.Commit()
 }
