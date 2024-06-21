@@ -2,6 +2,7 @@ package repository
 
 import (
 	"database/sql"
+	"log"
 )
 
 type BookWorker interface {
@@ -34,19 +35,19 @@ func NewRepository(db *sql.DB) *Repository {
 	}
 }
 
-func (repo *Repository) CreateBook(book *Book) (int, error) {
+func (repo *Repository) CreateBook(book *Book) (bookId int, err error) {
 	tx, err := repo.db.Begin()
 	if err != nil {
 		return 0, err
 	}
 
-	id, err := repo.BookWorker.Create(tx, book)
+	bookId, err = repo.BookWorker.Create(tx, book)
 	if err != nil {
 		_ = tx.Rollback()
 		return 0, err
 	}
 
-	return id, tx.Commit()
+	return bookId, tx.Commit()
 }
 
 func (repo *Repository) GetAllBook() ([]Book, error) {
@@ -57,55 +58,65 @@ func (repo *Repository) GetBookById(id int) (Book, error) {
 	return repo.BookWorker.GetById(repo.db, id)
 }
 
-func (repo *Repository) UpdateBook(book *Book) (int64, error) {
+func (repo *Repository) UpdateBook(book *Book) (updResult bool, err error) {
 	var rowCnt int64 = 0
+	updResult = false
 
 	tx, err := repo.db.Begin()
 	if err != nil {
-		return 0, err
+		return updResult, err
 	}
 
 	result, err := repo.BookWorker.Update(tx, book)
 	if err != nil {
 		_ = tx.Rollback()
-		return 0, err
+		return updResult, err
 	}
 	if result != nil {
 		rowCnt, _ = result.RowsAffected()
 	}
-	return rowCnt, tx.Commit()
+
+	if rowCnt != 0 {
+		updResult = true
+	}
+	return updResult, tx.Commit()
 }
 
-func (repo *Repository) DeleteBook(id int) (int64, error) {
+func (repo *Repository) DeleteBook(id int) (delResult bool, err error) {
 	var rowCnt int64 = 0
+	delResult = false
+
 	tx, err := repo.db.Begin()
 	if err != nil {
-		return 0, err
+		return delResult, err
 	}
 	result, err := repo.BookWorker.Delete(tx, id)
 	if err != nil {
 		_ = tx.Rollback()
-		return 0, err
+		return delResult, err
 	}
 	if result != nil {
 		rowCnt, _ = result.RowsAffected()
 	}
-	return rowCnt, tx.Commit()
+	if rowCnt != 0 {
+		delResult = true
+	}
+	return delResult, tx.Commit()
 }
 
-func (repo *Repository) CreateAuthor(author *Author) (int, error) {
+func (repo *Repository) CreateAuthor(author *Author) (authorId int, err error) {
 	tx, err := repo.db.Begin()
 	if err != nil {
 		return 0, err
 	}
 
-	id, err := repo.AuthorWorker.Create(tx, author)
+	authorId, err = repo.AuthorWorker.Create(tx, author)
 	if err != nil {
 		_ = tx.Rollback()
 		return 0, err
 	}
 
-	return id, tx.Commit()
+	return authorId, tx.Commit()
 }
 
 func (repo *Repository) GetAllAuthor() ([]Author, error) {
@@ -116,38 +127,84 @@ func (repo *Repository) GetAuthorById(id int) (Author, error) {
 	return repo.AuthorWorker.GetById(repo.db, id)
 }
 
-func (repo *Repository) UpdateAuthor(author *Author) (int64, error) {
+func (repo *Repository) UpdateAuthor(author *Author) (updResult bool, err error) {
 	var rowCnt int64 = 0
-
+	updResult = false
 	tx, err := repo.db.Begin()
 	if err != nil {
-		return 0, err
+		return updResult, err
 	}
 
 	result, err := repo.AuthorWorker.Update(tx, author)
 	if err != nil {
 		_ = tx.Rollback()
-		return 0, err
+		return updResult, err
 	}
 	if result != nil {
 		rowCnt, _ = result.RowsAffected()
 	}
-	return rowCnt, tx.Commit()
+	if rowCnt != 0 {
+		updResult = true
+	}
+	return updResult, tx.Commit()
 }
 
-func (repo *Repository) DeleteAuthor(id int) (int64, error) {
+func (repo *Repository) DeleteAuthor(id int) (delResult bool, err error) {
 	var rowCnt int64 = 0
+	delResult = false
 	tx, err := repo.db.Begin()
 	if err != nil {
-		return 0, err
+		return delResult, err
 	}
 	result, err := repo.AuthorWorker.Delete(tx, id)
 	if err != nil {
 		_ = tx.Rollback()
-		return 0, err
+		return delResult, err
 	}
 	if result != nil {
 		rowCnt, _ = result.RowsAffected()
 	}
-	return rowCnt, tx.Commit()
+	if rowCnt != 0 {
+		delResult = true
+	}
+	return delResult, tx.Commit()
+}
+
+func (repo *Repository) UpdateBookAndAuthor(book *Book) (updResult bool, err error) {
+	var rowCnt int64 = 0
+	updResult = false
+	tx, err := repo.db.Begin()
+	if err != nil {
+		return updResult, err
+	}
+
+	result, err := repo.BookWorker.Update(tx, book)
+	if err != nil {
+		_ = tx.Rollback()
+		return updResult, err
+	}
+	if result != nil {
+		rowCnt, _ = result.RowsAffected()
+	}
+	if rowCnt == 0 {
+		_ = tx.Rollback()
+		log.Println("book doesn't exist")
+		return updResult, nil
+	}
+
+	result, err = repo.AuthorWorker.Update(tx, book.Author)
+	if err != nil {
+		_ = tx.Rollback()
+		return updResult, err
+	}
+	if result != nil {
+		rowCnt, _ = result.RowsAffected()
+	}
+	if rowCnt == 0 {
+		_ = tx.Rollback()
+		log.Println("author doesn't exist")
+		return updResult, nil
+	}
+	updResult = true
+	return updResult, tx.Commit()
 }

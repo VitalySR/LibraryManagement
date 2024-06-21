@@ -142,15 +142,15 @@ func (h *Hundler) bookId(w http.ResponseWriter, r *http.Request) {
 		}
 		book.ID = &id32
 
-		rowsUpdate, err := h.repository.UpdateBook(book)
+		updResult, err := h.repository.UpdateBook(book)
 		if err != nil {
 			errorResult(&w, "Error updating book", err, http.StatusInternalServerError)
 			return
 		}
 		w.WriteHeader(http.StatusOK)
 		response := "Updated book successfully"
-		if rowsUpdate == 0 {
-			response = "No rows updated"
+		if !updResult {
+			response = "No books updated"
 		}
 		_, err = w.Write([]byte(response))
 		if err != nil {
@@ -158,15 +158,15 @@ func (h *Hundler) bookId(w http.ResponseWriter, r *http.Request) {
 		}
 	case http.MethodDelete:
 		log.Println("Processing method DELETE")
-		rowsDel, err := h.repository.DeleteBook(id)
+		delResult, err := h.repository.DeleteBook(id)
 		if err != nil {
 			errorResult(&w, "Error deleting book", err, http.StatusInternalServerError)
 			return
 		}
 		w.WriteHeader(http.StatusOK)
 		response := "Deleted book successfully"
-		if rowsDel == 0 {
-			response = "No rows deleted"
+		if !delResult {
+			response = "No books deleted"
 		}
 		_, err = w.Write([]byte(response))
 		if err != nil {
@@ -291,15 +291,15 @@ func (h *Hundler) authorsId(w http.ResponseWriter, r *http.Request) {
 		}
 		author.ID = &id32
 
-		rowsUpdate, err := h.repository.UpdateAuthor(author)
+		updResult, err := h.repository.UpdateAuthor(author)
 		if err != nil {
 			errorResult(&w, "Error updating author", err, http.StatusInternalServerError)
 			return
 		}
 		w.WriteHeader(http.StatusOK)
 		response := "Updated author successfully"
-		if rowsUpdate == 0 {
-			response = "No rows updated"
+		if !updResult {
+			response = "No authors updated"
 		}
 		_, err = w.Write([]byte(response))
 		if err != nil {
@@ -307,15 +307,15 @@ func (h *Hundler) authorsId(w http.ResponseWriter, r *http.Request) {
 		}
 	case http.MethodDelete:
 		log.Println("Processing method DELETE")
-		rowsDel, err := h.repository.DeleteAuthor(id)
+		delResult, err := h.repository.DeleteAuthor(id)
 		if err != nil {
 			errorResult(&w, "Error deleting author", err, http.StatusInternalServerError)
 			return
 		}
 		w.WriteHeader(http.StatusOK)
 		response := "Deleted author successfully"
-		if rowsDel == 0 {
-			response = "No rows deleted"
+		if !delResult {
+			response = "No authors deleted"
 		}
 		_, err = w.Write([]byte(response))
 		if err != nil {
@@ -353,6 +353,7 @@ func (h *Hundler) updateBookAndAuthor(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		errorResult(&w, "Error decoding input JSON", err, http.StatusBadRequest)
+		return
 	}
 	log.Println("Input body:", string(body))
 	//err := json.NewDecoder(r.Body).Decode(book)
@@ -381,6 +382,21 @@ func (h *Hundler) updateBookAndAuthor(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	book.Author.ID = &authorId32
+
+	updResult, err := h.repository.UpdateBookAndAuthor(book)
+	if err != nil {
+		errorResult(&w, "Error updating", err, http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	response := "Updated book and author successfully"
+	if !updResult {
+		response = "No objects updated"
+	}
+	_, err = w.Write([]byte(response))
+	if err != nil {
+		log.Println("Error write answer:", err)
+	}
 }
 
 func errorResult(w *http.ResponseWriter, msg string, err error, stat int) {
