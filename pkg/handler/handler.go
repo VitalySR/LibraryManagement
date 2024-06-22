@@ -400,6 +400,9 @@ func (h *Hundler) updateBookAndAuthor(w http.ResponseWriter, r *http.Request) {
 }
 
 func errorResult(w *http.ResponseWriter, msg string, err error, stat int) {
-	log.Println(msg, ". Error:", err)
+	if err != nil {
+		msg = msg + ". Error: " + err.Error()
+	}
+	log.Println(msg)
 	http.Error(*w, msg, stat)
 }

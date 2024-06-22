@@ -2,6 +2,8 @@ package repository
 
 import (
 	"errors"
+	"library/tools"
+	"time"
 )
 
 type Book struct {
@@ -13,11 +15,11 @@ type Book struct {
 }
 
 type Author struct {
-	ID        *int32  `json:"id,omitempty"`
-	FirstName *string `json:"first_name,omitempty"`
-	LastName  *string `json:"last_name,omitempty"`
-	Biography *string `json:"biography,omitempty"`
-	BirthDate *string `json:"birth_date,omitempty"`
+	ID        *int32            `json:"id,omitempty"`
+	FirstName *string           `json:"first_name,omitempty"`
+	LastName  *string           `json:"last_name,omitempty"`
+	Biography *string           `json:"biography,omitempty"`
+	BirthDate *tools.CustomDate `json:"birth_date,omitempty"`
 }
 
 func (b Book) Validate(withAuthor bool) error {
@@ -43,6 +45,14 @@ func (a Author) Validate() error {
 
 	if a.LastName == nil || len(*a.LastName) == 0 {
 		return errors.New("author's last_name is mandatory fields")
+	}
+
+	return nil
+}
+
+func (a Author) BirthDateTime() *time.Time {
+	if a.BirthDate != nil {
+		return &a.BirthDate.Time
 	}
 	return nil
 }

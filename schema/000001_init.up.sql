@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS author
     FirstName   varchar(255)    not null,
     LastName    varchar(255)    not null,
     Biography   text,
-    BirthDate   varchar(20)
+    BirthDate   date
 );
 
 CREATE TABLE IF NOT EXISTS book

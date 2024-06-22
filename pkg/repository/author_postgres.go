@@ -18,8 +18,7 @@ func (b *AuthorPostgres) Create(tx *sql.Tx, author *Author) (int, error) {
 
 	var id int
 	createItemQuery := fmt.Sprintf("INSERT INTO %s (FirstName, LastName, Biography, BirthDate) values ($1, $2, $3, $4) RETURNING id", authorTable)
-
-	row := tx.QueryRow(createItemQuery, author.FirstName, author.LastName, author.Biography, author.BirthDate)
+	row := tx.QueryRow(createItemQuery, author.FirstName, author.LastName, author.Biography, author.BirthDateTime())
 	err := row.Scan(&id)
 
 	return id, err
@@ -61,7 +60,7 @@ func (b *AuthorPostgres) Update(tx *sql.Tx, author *Author) (sql.Result, error) 
 	log.Println("AuthorPostgres. Update")
 
 	query := fmt.Sprintf("update %s set FirstName = $2, LastName = $3, Biography = $4, BirthDate = $5 where Id = $1", authorTable)
-	return tx.Exec(query, author.ID, author.FirstName, author.LastName, author.Biography, author.BirthDate)
+	return tx.Exec(query, author.ID, author.FirstName, author.LastName, author.Biography, author.BirthDateTime())
 }
 
 func (b *AuthorPostgres) Delete(tx *sql.Tx, id int) (sql.Result, error) {
