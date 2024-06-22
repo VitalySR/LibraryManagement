@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/joho/godotenv"
 	LibraryManagement "library"
 	"library/pkg/handler"
 	"library/pkg/repository"
@@ -12,9 +13,13 @@ import (
 )
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
 	// Инициализируем базу данных
-	dataSourceName := "postgres://postgres:qwerty@localhost:5432/postgres?sslmode=disable"
-	db, err := repository.InitDB(dataSourceName)
+	db, err := repository.InitDB()
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -2,9 +2,11 @@ package repository
 
 import (
 	"database/sql"
+	"fmt"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	"log"
+	"os"
 
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	_ "github.com/lib/pq"
@@ -17,8 +19,9 @@ const (
 
 var db *sql.DB
 
-func InitDB(dataSourceName string) (*sql.DB, error) {
+func InitDB() (*sql.DB, error) {
 	var err error
+	dataSourceName := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", os.Getenv("DB_USER"), os.Getenv("DB_PASSWORD"), os.Getenv("DB_HOST"), os.Getenv("DB_PORT"), os.Getenv("DB_NAME"))
 	db, err = sql.Open("postgres", dataSourceName)
 	if err != nil {
 		return nil, err
