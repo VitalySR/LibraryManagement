@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 )
 
@@ -16,6 +17,17 @@ func main() {
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env file")
+	}
+
+	//Получаем значения переменных для работы сервера
+	httpPort := os.Getenv("PORT")
+	httpReadTimeout, err := strconv.Atoi(os.Getenv("HTTP_READ_TIMEOUT"))
+	if err != nil || httpReadTimeout <= 0 {
+		log.Fatal("HTTP_READ_TIMEOUT is wrong. See .env file")
+	}
+	httpWriteTimeout, err := strconv.Atoi(os.Getenv("HTTP_WRITE_TIMEOUT"))
+	if err != nil || httpWriteTimeout <= 0 {
+		log.Fatal("HTTP_WRITE_TIMEOUT is wrong. See .env file")
 	}
 
 	// Инициализируем базу данных
@@ -32,9 +44,9 @@ func main() {
 	repos := repository.NewRepository(db)
 	hund := handler.NewHandler(repos)
 
-	srv := new(LibraryManagement.Server)
+	srv := LibraryManagement.NewServer(httpPort, hund.InitRoutes(), httpReadTimeout, httpWriteTimeout)
 	go func() {
-		err = srv.Run("8080", hund.InitRoutes())
+		err = srv.Run()
 		if err != nil {
 			log.Fatal(err)
 		}

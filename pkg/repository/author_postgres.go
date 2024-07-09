@@ -3,11 +3,18 @@ package repository
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 	"log"
 )
 
 type AuthorPostgres struct{}
+
+const (
+	insertAuthor  = "INSERT INTO author (FirstName, LastName, Biography, BirthDate) values ($1, $2, $3, $4) RETURNING id"
+	selectAuthors = "SELECT Id, FirstName, LastName, Biography, BirthDate FROM author"
+	selectAuthor  = "SELECT Id, FirstName, LastName, Biography, BirthDate FROM author WHERE Id = $1"
+	updateAuthor  = "UPDATE author SET FirstName = $2, LastName = $3, Biography = $4, BirthDate = $5 WHERE Id = $1"
+	deleteAuthor  = "DELETE FROM author WHERE Id = $1"
+)
 
 func NewAuthorPostgres() *AuthorPostgres {
 	return &AuthorPostgres{}
@@ -17,8 +24,7 @@ func (b *AuthorPostgres) Create(tx *sql.Tx, author *Author) (int, error) {
 	log.Println("AuthorPostgres. Create")
 
 	var id int
-	createItemQuery := fmt.Sprintf("INSERT INTO %s (FirstName, LastName, Biography, BirthDate) values ($1, $2, $3, $4) RETURNING id", authorTable)
-	row := tx.QueryRow(createItemQuery, author.FirstName, author.LastName, author.Biography, author.BirthDateTime())
+	row := tx.QueryRow(insertAuthor, author.FirstName, author.LastName, author.Biography, author.BirthDateTime())
 	err := row.Scan(&id)
 
 	return id, err
@@ -26,8 +32,7 @@ func (b *AuthorPostgres) Create(tx *sql.Tx, author *Author) (int, error) {
 
 func (b *AuthorPostgres) GetAll(db *sql.DB) ([]Author, error) {
 	log.Println("AuthorPostgres. GetAll")
-	query := fmt.Sprintf("select Id, FirstName, LastName, Biography, BirthDate from %s", authorTable)
-	rows, err := db.Query(query)
+	rows, err := db.Query(selectAuthors)
 	if err != nil {
 		return nil, err
 	}
@@ -46,8 +51,7 @@ func (b *AuthorPostgres) GetAll(db *sql.DB) ([]Author, error) {
 
 func (b *AuthorPostgres) GetById(db *sql.DB, id int) (Author, error) {
 	log.Println("AuthorPostgres. GetById")
-	query := fmt.Sprintf("select Id, FirstName, LastName, Biography, BirthDate from %s where Id = $1", authorTable)
-	row := db.QueryRow(query, id)
+	row := db.QueryRow(selectAuthor, id)
 	author := Author{}
 	err := row.Scan(&author.ID, &author.FirstName, &author.LastName, &author.Biography, &author.BirthDate)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
@@ -59,13 +63,11 @@ func (b *AuthorPostgres) GetById(db *sql.DB, id int) (Author, error) {
 func (b *AuthorPostgres) Update(tx *sql.Tx, author *Author) (sql.Result, error) {
 	log.Println("AuthorPostgres. Update")
 
-	query := fmt.Sprintf("update %s set FirstName = $2, LastName = $3, Biography = $4, BirthDate = $5 where Id = $1", authorTable)
-	return tx.Exec(query, author.ID, author.FirstName, author.LastName, author.Biography, author.BirthDateTime())
+	return tx.Exec(updateAuthor, author.ID, author.FirstName, author.LastName, author.Biography, author.BirthDateTime())
 }
 
 func (b *AuthorPostgres) Delete(tx *sql.Tx, id int) (sql.Result, error) {
 	log.Println("AuthorPostgres. Delete")
 
-	query := fmt.Sprintf("delete from %s where Id = $1", authorTable)
-	return tx.Exec(query, id)
+	return tx.Exec(deleteAuthor, id)
 }

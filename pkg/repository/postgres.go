@@ -12,11 +12,6 @@ import (
 	_ "github.com/lib/pq"
 )
 
-const (
-	bookTable   = "book"
-	authorTable = "author"
-)
-
 var db *sql.DB
 
 func InitDB() (*sql.DB, error) {
@@ -54,5 +49,6 @@ func MigrateDB() error {
 }
 
 func CloseDB() error {
+	log.Println("Close DB")
 	return db.Close()
 }
